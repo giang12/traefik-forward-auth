@@ -4,13 +4,16 @@ go 1.13
 
 require (
 	github.com/containous/traefik/v2 v2.1.2
-	github.com/coreos/go-oidc v2.1.0+incompatible
-	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
+	github.com/coreos/go-oidc/v3 v3.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.7.0
 	github.com/thomseddon/go-flags v1.4.1-0.20190507184247-a3629c504486
-	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	gopkg.in/square/go-jose.v2 v2.3.1
+	github.com/thomseddon/traefik-forward-auth/internal/pkce v0.0.0-00010101000000-000000000000
+	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
+	golang.org/x/net v0.0.0-20220809184613-07c6da5e1ced // indirect
+	golang.org/x/oauth2 v0.0.0-20220808172628-8227340efae7
+	google.golang.org/protobuf v1.28.1 // indirect
+	gopkg.in/square/go-jose.v2 v2.6.0
 )
 
 // From traefik
@@ -24,3 +27,5 @@ replace (
 	github.com/mailgun/multibuf => github.com/containous/multibuf v0.0.0-20190809014333-8b6c9a7e6bba
 	github.com/rancher/go-rancher-metadata => github.com/containous/go-rancher-metadata v0.0.0-20190402144056-c6a65f8b7a28
 )
+
+replace github.com/thomseddon/traefik-forward-auth/internal/pkce => ./internal/pcke/

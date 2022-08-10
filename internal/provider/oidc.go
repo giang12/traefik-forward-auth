@@ -3,8 +3,10 @@ package provider
 import (
 	"context"
 	"errors"
+	"github.com/thomseddon/traefik-forward-auth/internal/pkce"
+	"strings"
 
-	"github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 )
 
@@ -13,11 +15,13 @@ type OIDC struct {
 	IssuerURL    string `long:"issuer-url" env:"ISSUER_URL" description:"Issuer URL"`
 	ClientID     string `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
+	PkceRequired bool   `long:"pkce-required" env:"PKCE_REQUIRED" description:"Optional pkce required indicator"`
 
 	OAuthProvider
 
-	provider *oidc.Provider
-	verifier *oidc.IDTokenVerifier
+	provider     *oidc.Provider
+	verifier     *oidc.IDTokenVerifier
+	pkceVerifier *pkce.CodeVerifier
 }
 
 // Name returns the name of the provider
@@ -27,9 +31,9 @@ func (o *OIDC) Name() string {
 
 // Setup performs validation and setup
 func (o *OIDC) Setup() error {
-	// Check parms
-	if o.IssuerURL == "" || o.ClientID == "" || o.ClientSecret == "" {
-		return errors.New("providers.oidc.issuer-url, providers.oidc.client-id, providers.oidc.client-secret must be set")
+	// Check params
+	if err := o.checkParams(); err != nil {
+		return err
 	}
 
 	var err error
@@ -61,12 +65,28 @@ func (o *OIDC) Setup() error {
 
 // GetLoginURL provides the login url for the given redirect uri and state
 func (o *OIDC) GetLoginURL(redirectURI, state string) string {
-	return o.OAuthGetLoginURL(redirectURI, state)
+	var opts []oauth2.AuthCodeOption
+	if o.PkceRequired {
+		v, e := pkce.CreateCodeVerifier()
+		if e != nil {
+			panic(e)
+		}
+		o.pkceVerifier = v
+		opts = append(opts, oauth2.SetAuthURLParam("code_challenge_method", "S256"))
+		opts = append(opts, oauth2.SetAuthURLParam("code_challenge", o.pkceVerifier.CodeChallengeS256()))
+	}
+	return o.OAuthGetLoginURL(redirectURI, state, opts...)
 }
 
 // ExchangeCode exchanges the given redirect uri and code for a token
 func (o *OIDC) ExchangeCode(redirectURI, code string) (string, error) {
-	token, err := o.OAuthExchangeCode(redirectURI, code)
+	var opts []oauth2.AuthCodeOption
+
+	if o.PkceRequired {
+		opts = append(opts, oauth2.SetAuthURLParam("code_verifier", o.pkceVerifier.String()))
+	}
+
+	token, err := o.OAuthExchangeCode(redirectURI, code, opts...)
 	if err != nil {
 		return "", err
 	}
@@ -96,4 +116,26 @@ func (o *OIDC) GetUser(token string) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (o *OIDC) checkParams() error {
+	if o.IssuerURL == "" || o.ClientID == "" || (o.ClientSecret == "" && !o.PkceRequired) {
+		var emptyFields []string
+
+		if o.IssuerURL == "" {
+			emptyFields = append(emptyFields, "providers.oidc.issuer-url")
+		}
+
+		if o.ClientID == "" {
+			emptyFields = append(emptyFields, "providers.oidc.client-id")
+		}
+
+		if o.ClientSecret == "" && !o.PkceRequired {
+			emptyFields = append(emptyFields, "providers.oidc.client-secret")
+		}
+
+		return errors.New(strings.Join(emptyFields, ", ") + " must be set")
+	}
+
+	return nil
 }
