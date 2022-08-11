@@ -16,6 +16,7 @@ type OIDC struct {
 	ClientID     string `long:"client-id" env:"CLIENT_ID" description:"Client ID"`
 	ClientSecret string `long:"client-secret" env:"CLIENT_SECRET" description:"Client Secret" json:"-"`
 	PkceRequired bool   `long:"pkce-required" env:"PKCE_REQUIRED" description:"Optional pkce required indicator"`
+	WebId        bool 	`long:"webid" env:"WEBID" description:"require scope webid"`
 
 	OAuthProvider
 
@@ -45,6 +46,10 @@ func (o *OIDC) Setup() error {
 		return err
 	}
 
+	scopes:= []string{oidc.ScopeOpenID, "profile", "email"};
+	if(o.WebId) {
+		scopes = []string{oidc.ScopeOpenID, "profile", "webid"};
+	}
 	// Create oauth2 config
 	o.Config = &oauth2.Config{
 		ClientID:     o.ClientID,
@@ -52,7 +57,7 @@ func (o *OIDC) Setup() error {
 		Endpoint:     o.provider.Endpoint(),
 
 		// "openid" is a required scope for OpenID Connect flows.
-		Scopes: []string{oidc.ScopeOpenID, "profile", "email"},
+		Scopes: scopes,
 	}
 
 	// Create OIDC verifier

@@ -55,6 +55,9 @@ type Config struct {
 	ClientIdLegacy      string        `long:"client-id" env:"CLIENT_ID" description:"DEPRECATED - Use \"providers.google.client-id\""`
 	ClientSecretLegacy  string        `long:"client-secret" env:"CLIENT_SECRET" description:"DEPRECATED - Use \"providers.google.client-id\""  json:"-"`
 	PromptLegacy        string        `long:"prompt" env:"PROMPT" description:"DEPRECATED - Use \"providers.google.prompt\""`
+
+	//experimental
+	WebId         		bool 		  `long:"webid" env:"WEBID" description:"Use webid (instead of email) for auth"`
 }
 
 // NewGlobalConfig creates a new global config, parsed from command arguments
